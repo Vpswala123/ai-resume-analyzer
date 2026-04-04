@@ -1,0 +1,366 @@
+:root {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #12213f;
+  background:
+    radial-gradient(circle at top left, rgba(80, 146, 255, 0.28), transparent 35%),
+    radial-gradient(circle at top right, rgba(255, 208, 88, 0.24), transparent 30%),
+    linear-gradient(180deg, #f7fbff 0%, #eef4ff 54%, #fefaf0 100%);
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.background-glow {
+  position: absolute;
+  width: 26rem;
+  height: 26rem;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.65;
+}
+
+.background-glow-left {
+  top: -6rem;
+  left: -10rem;
+  background: rgba(63, 132, 255, 0.35);
+}
+
+.background-glow-right {
+  top: 8rem;
+  right: -8rem;
+  background: rgba(255, 203, 61, 0.28);
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  width: min(1180px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 3rem 0 4rem;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.2fr 0.95fr;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.hero-copy,
+.upload-panel,
+.card {
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(130, 165, 238, 0.28);
+  border-radius: 24px;
+  box-shadow: 0 16px 60px rgba(33, 78, 156, 0.12);
+  backdrop-filter: blur(18px);
+}
+
+.hero-copy {
+  padding: 2.5rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #3566d6;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2.1rem, 4vw, 3.8rem);
+  line-height: 1.05;
+  max-width: 11ch;
+}
+
+.hero-text {
+  max-width: 52ch;
+  margin-top: 1rem;
+  color: #4f648f;
+}
+
+.upload-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.field {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.field span {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #2c4878;
+}
+
+.field input {
+  width: 100%;
+  border: 1px solid rgba(100, 133, 204, 0.32);
+  border-radius: 16px;
+  padding: 0.95rem 1rem;
+  background: rgba(247, 250, 255, 0.92);
+  color: #17305d;
+}
+
+.file-field input {
+  padding: 0.8rem 1rem;
+}
+
+.primary-button {
+  border: 0;
+  border-radius: 16px;
+  padding: 1rem 1.2rem;
+  font-weight: 700;
+  color: #112144;
+  background: linear-gradient(135deg, #ffd24d 0%, #ffbe2f 100%);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 12px 28px rgba(255, 196, 50, 0.32);
+}
+
+.secondary-button {
+  border: 1px solid rgba(241, 191, 44, 0.5);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  font-weight: 700;
+  color: #8a5a00;
+  background: rgba(255, 244, 204, 0.72);
+  cursor: pointer;
+}
+
+.secondary-button-blue {
+  border-color: rgba(62, 125, 255, 0.28);
+  color: #1d4ed8;
+  background: rgba(219, 234, 254, 0.8);
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.primary-button:hover {
+  transform: translateY(-1px);
+}
+
+.primary-button:disabled {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.button-loader {
+  display: inline-flex;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.spinner {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(17, 33, 68, 0.25);
+  border-top-color: #112144;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.error-message {
+  margin: 0;
+  color: #c53232;
+  font-weight: 600;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.card {
+  padding: 1.35rem;
+  grid-column: span 4;
+}
+
+.card-yellow {
+  background: linear-gradient(180deg, rgba(255, 249, 228, 0.94), rgba(255, 255, 255, 0.88));
+}
+
+.card-header h2 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+}
+
+.score-block {
+  display: grid;
+  gap: 1rem;
+}
+
+.action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.muted-label {
+  margin: 0 0 0.3rem;
+  color: #5d6f98;
+  font-size: 0.9rem;
+}
+
+.score-value {
+  margin: 0;
+  font-size: 2.8rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.progress-track {
+  width: 100%;
+  height: 0.85rem;
+  border-radius: 999px;
+  background: rgba(24, 56, 118, 0.1);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3e7dff 0%, #ffd23f 100%);
+}
+
+.summary-text {
+  margin: 0;
+  color: #516583;
+}
+
+.metric-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.metric-pill {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 9rem;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
+  background: rgba(242, 247, 255, 0.95);
+}
+
+.metric-pill span {
+  font-size: 0.78rem;
+  color: #59719c;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.metric-pill strong {
+  font-size: 1.15rem;
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.chip {
+  padding: 0.52rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(57, 125, 255, 0.1);
+  color: #214c9d;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.chip-warning {
+  background: rgba(255, 209, 78, 0.22);
+  color: #7b5600;
+}
+
+.list {
+  margin: 0;
+  padding-left: 1.15rem;
+  color: #334b71;
+}
+
+.list li + li {
+  margin-top: 0.7rem;
+}
+
+.resume-draft {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.resume-draft-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.resume-draft-headline {
+  margin: -0.35rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1d4ed8;
+}
+
+.dashboard-grid .card:first-child {
+  grid-column: span 5;
+}
+
+.dashboard-grid .card:nth-child(2) {
+  grid-column: span 7;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 960px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card,
+  .dashboard-grid .card:first-child,
+  .dashboard-grid .card:nth-child(2) {
+    grid-column: auto;
+  }
+}

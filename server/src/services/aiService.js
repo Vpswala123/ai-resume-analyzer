@@ -1,22 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
 import { config } from "../config.js";
 import { analysisSchema } from "../schemas/analysisSchema.js";
-
-let aiClient = null;
-
-function getAiClient() {
-  if (!config.geminiApiKey) {
-    throw new Error("GEMINI_API_KEY is missing. Add it to server/.env before analyzing resumes.");
-  }
-
-  if (!aiClient) {
-    aiClient = new GoogleGenAI({
-      apiKey: config.geminiApiKey,
-    });
-  }
-
-  return aiClient;
-}
 
 function buildPrompt(resumeText, jobRole) {
   const roleBlock = jobRole
@@ -52,33 +35,43 @@ export async function analyzeResumeText(resumeText, jobRole = "") {
     throw new Error("Resume text is empty.");
   }
 
-  const ai = getAiClient();
-  const response = await ai.models.generateContent({
-    model: config.geminiModel,
-    contents: [
-      {
-        role: "user",
-        parts: [
-          {
-            text: [
-              "You evaluate resumes and return JSON only that matches the provided schema.",
-              buildPrompt(resumeText, jobRole),
-            ].join("\n\n"),
-          },
-        ],
-      },
-    ],
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: analysisSchema,
+  const response = await fetch(`${config.ollamaBaseUrl}/api/generate`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
     },
+    body: JSON.stringify({
+      model: config.ollamaModel,
+      stream: false,
+      format: analysisSchema,
+      prompt: [
+        "You evaluate resumes and return JSON only that matches the provided schema.",
+        buildPrompt(resumeText, jobRole),
+      ].join("\n\n"),
+    }),
   });
 
-  const output = response.text;
+  const payload = await response.json();
 
-  if (!output) {
-    throw new Error("Gemini response did not contain structured output.");
+  if (!response.ok) {
+    const message = payload?.error || "Local Ollama request failed.";
+    if (message.includes("requires more system memory")) {
+      throw new Error(
+        `The local model ${config.ollamaModel} cannot start because Ollama reported insufficient RAM. Free memory or switch to a smaller model in server/.env.`
+      );
+    }
+    throw new Error(message);
   }
 
-  return JSON.parse(output);
+  const output = payload.response;
+
+  if (!output) {
+    throw new Error("Local model response did not contain structured output.");
+  }
+
+  try {
+    return JSON.parse(output);
+  } catch {
+    throw new Error("Local model returned invalid JSON. Try again or switch to a smaller local model.");
+  }
 }

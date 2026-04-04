@@ -4,7 +4,7 @@ dotenv.config();
 
 export const config = {
   port: process.env.PORT || 5000,
-  geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY,
-  geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+  ollamaBaseUrl: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
+  ollamaModel: process.env.OLLAMA_MODEL || "gemma4:latest",
   clientUrl: process.env.CLIENT_URL || "http://localhost:5173",
 };

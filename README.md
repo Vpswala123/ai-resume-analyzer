@@ -1,6 +1,6 @@
 # AI Resume Analyzer
 
-Full-stack resume analysis app with a React dashboard frontend and an Express backend powered by Google AI Studio Gemini.
+Full-stack resume analysis app with a React dashboard frontend and an Express backend powered by a local Ollama model.
 
 ## Structure
 
@@ -16,9 +16,11 @@ npm install
 npm run install:all
 ```
 
-2. Create `server/.env` from `server/.env.example` and add your Google AI Studio key
+2. Create `server/.env` from `server/.env.example`
 
-3. Start the app:
+3. Make sure Ollama is running locally and the configured model is installed
+
+4. Start the app:
 
 ```bash
 npm run dev

@@ -335,6 +335,42 @@ input {
   color: #1d4ed8;
 }
 
+.resume-draft-meta {
+  margin: -0.35rem 0 0;
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+.resume-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.9rem;
+}
+
+.resume-preview-block {
+  padding: 0.95rem 1rem;
+  border-radius: 18px;
+  background: rgba(242, 247, 255, 0.88);
+  border: 1px solid rgba(130, 165, 238, 0.18);
+}
+
+.resume-preview-label {
+  margin: 0 0 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #59719c;
+}
+
+.compact-list {
+  padding-left: 1rem;
+}
+
+.compact-list li + li {
+  margin-top: 0.45rem;
+}
+
 .dashboard-grid .card:first-child {
   grid-column: span 5;
 }
@@ -355,6 +391,10 @@ input {
   }
 
   .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .resume-preview-grid {
     grid-template-columns: 1fr;
   }
 

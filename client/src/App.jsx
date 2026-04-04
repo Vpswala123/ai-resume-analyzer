@@ -2,6 +2,10 @@ import { useState } from "react";
 
 const API_URL = "http://localhost:5000/api/analyze";
 
+function toArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
 function ProgressBar({ value }) {
   return (
     <div className="progress-track" aria-hidden="true">
@@ -28,6 +32,19 @@ export default function App() {
   const [downloading, setDownloading] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+
+  const improvedResume = result?.improvedResume ?? {};
+  const skills = toArray(result?.skills);
+  const missingSkills = toArray(result?.missingSkills);
+  const jobMatchMissingSkills = toArray(result?.jobMatch?.missingSkills);
+  const skillAnalysis = toArray(result?.skillAnalysis);
+  const topImprovements = toArray(result?.topImprovements);
+  const suggestions = toArray(result?.improvementSuggestions);
+  const resumeSkills = toArray(improvedResume.keySkills);
+  const resumeExperience = toArray(improvedResume.experience);
+  const resumeProjects = toArray(improvedResume.projects);
+  const resumeEducation = toArray(improvedResume.education);
+  const resumeCertifications = toArray(improvedResume.certifications);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -197,16 +214,16 @@ export default function App() {
               <div className="metric-row">
                 <div className="metric-pill">
                   <span>Match</span>
-                  <strong>{result.jobMatch.matchPercentage}%</strong>
+                  <strong>{result.jobMatch?.matchPercentage ?? 0}%</strong>
                 </div>
                 <div className="metric-pill">
                   <span>Role</span>
-                  <strong>{result.jobMatch.role || "General"}</strong>
+                  <strong>{result.jobMatch?.role || "General"}</strong>
                 </div>
               </div>
-              <p className="summary-text">{result.jobMatch.rationale}</p>
+              <p className="summary-text">{result.jobMatch?.rationale || "No role match rationale available yet."}</p>
               <div className="chip-group">
-                {result.jobMatch.missingSkills.map((skill) => (
+                {jobMatchMissingSkills.map((skill) => (
                   <span className="chip chip-warning" key={skill}>
                     {skill}
                   </span>
@@ -216,7 +233,7 @@ export default function App() {
 
             <SectionCard title="Skills">
               <div className="chip-group">
-                {result.skills.map((skill) => (
+                {skills.map((skill) => (
                   <span className="chip" key={skill}>
                     {skill}
                   </span>
@@ -226,7 +243,7 @@ export default function App() {
 
             <SectionCard title="Skill Analysis">
               <ul className="list">
-                {result.skillAnalysis.map((item) => (
+                {skillAnalysis.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
@@ -234,7 +251,7 @@ export default function App() {
 
             <SectionCard title="Top Improvements" accent="yellow">
               <ul className="list">
-                {result.topImprovements.map((item) => (
+                {topImprovements.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
@@ -243,32 +260,79 @@ export default function App() {
             <SectionCard title="Improved Resume Draft">
               <div className="resume-draft">
                 <p className="resume-draft-title">
-                  {result.improvedResume.candidateName || "Candidate Name"}
+                  {improvedResume.candidateName || "Candidate Name"}
                 </p>
-                <p className="resume-draft-headline">{result.improvedResume.headline}</p>
-                <p className="summary-text">{result.improvedResume.professionalSummary}</p>
+                <p className="resume-draft-headline">
+                  {improvedResume.headline || "Role-focused resume draft"}
+                </p>
+                <p className="resume-draft-meta">
+                  {improvedResume.contactLine || "Contact details will appear here when detected from the resume."}
+                </p>
+                <p className="summary-text">
+                  {improvedResume.professionalSummary || "No professional summary generated yet."}
+                </p>
                 <div className="chip-group">
-                  {result.improvedResume.keySkills.map((skill) => (
+                  {resumeSkills.map((skill) => (
                     <span className="chip" key={skill}>
                       {skill}
                     </span>
                   ))}
                 </div>
-                <ul className="list">
-                  {result.improvedResume.experience.slice(0, 3).map((item) => (
-                    <li key={`${item.role}-${item.organization}-${item.dates}`}>
-                      <strong>{item.role || "Role"}</strong>
-                      {item.organization ? `, ${item.organization}` : ""}
-                      {item.bullets[0] ? `: ${item.bullets[0]}` : ""}
-                    </li>
-                  ))}
-                </ul>
+                <div className="resume-preview-grid">
+                  <div className="resume-preview-block">
+                    <p className="resume-preview-label">Experience</p>
+                    <ul className="list compact-list">
+                      {resumeExperience.slice(0, 3).map((item) => (
+                        <li key={`${item.role}-${item.organization}-${item.dates}`}>
+                          <strong>{item.role || "Role"}</strong>
+                          {item.organization ? `, ${item.organization}` : ""}
+                          {item.dates ? ` (${item.dates})` : ""}
+                          {item.bullets?.[0] ? `: ${item.bullets[0]}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="resume-preview-block">
+                    <p className="resume-preview-label">Projects</p>
+                    <ul className="list compact-list">
+                      {resumeProjects.slice(0, 2).map((item) => (
+                        <li key={`${item.name}-${item.techStack}`}>
+                          <strong>{item.name || "Project"}</strong>
+                          {item.techStack ? `, ${item.techStack}` : ""}
+                          {item.bullets?.[0] ? `: ${item.bullets[0]}` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <div className="resume-preview-grid">
+                  <div className="resume-preview-block">
+                    <p className="resume-preview-label">Education</p>
+                    <ul className="list compact-list">
+                      {resumeEducation.slice(0, 2).map((item) => (
+                        <li key={`${item.institution}-${item.credential}-${item.dates}`}>
+                          <strong>{item.credential || "Credential"}</strong>
+                          {item.institution ? `, ${item.institution}` : ""}
+                          {item.dates ? ` (${item.dates})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="resume-preview-block">
+                    <p className="resume-preview-label">Certifications</p>
+                    <ul className="list compact-list">
+                      {resumeCertifications.slice(0, 3).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
               </div>
             </SectionCard>
 
             <SectionCard title="Suggestions">
               <ul className="list">
-                {result.improvementSuggestions.map((item) => (
+                {suggestions.map((item) => (
                   <li key={item}>{item}</li>
                 ))}
               </ul>
@@ -276,7 +340,7 @@ export default function App() {
 
             <SectionCard title="Missing Skills">
               <div className="chip-group">
-                {result.missingSkills.map((skill) => (
+                {missingSkills.map((skill) => (
                   <span className="chip chip-warning" key={skill}>
                     {skill}
                   </span>

@@ -4,7 +4,7 @@ dotenv.config();
 
 export const config = {
   port: process.env.PORT || 5000,
-  ollamaBaseUrl: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
-  ollamaModel: process.env.OLLAMA_MODEL || "gemma4:latest",
   clientUrl: process.env.CLIENT_URL || "http://localhost:5173",
+  openAiApiKey: process.env.OPENAI_API_KEY || "",
+  openAiModel: process.env.OPENAI_MODEL || "gpt-4o-mini",
 };

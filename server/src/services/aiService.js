@@ -1,5 +1,10 @@
+import OpenAI from "openai";
 import { config } from "../config.js";
 import { analysisSchema } from "../schemas/analysisSchema.js";
+
+const openai = new OpenAI({
+  apiKey: config.openAiApiKey,
+});
 
 function buildPrompt(resumeText, jobRole) {
   const roleBlock = jobRole
@@ -35,43 +40,33 @@ export async function analyzeResumeText(resumeText, jobRole = "") {
     throw new Error("Resume text is empty.");
   }
 
-  const response = await fetch(`${config.ollamaBaseUrl}/api/generate`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model: config.ollamaModel,
-      stream: false,
-      format: analysisSchema,
-      prompt: [
-        "You evaluate resumes and return JSON only that matches the provided schema.",
-        buildPrompt(resumeText, jobRole),
-      ].join("\n\n"),
-    }),
-  });
-
-  const payload = await response.json();
-
-  if (!response.ok) {
-    const message = payload?.error || "Local Ollama request failed.";
-    if (message.includes("requires more system memory")) {
-      throw new Error(
-        `The local model ${config.ollamaModel} cannot start because Ollama reported insufficient RAM. Free memory or switch to a smaller model in server/.env.`
-      );
-    }
-    throw new Error(message);
+  if (!config.openAiApiKey) {
+    throw new Error("OPENAI_API_KEY is missing. Add it to server/.env before analyzing resumes.");
   }
 
-  const output = payload.response;
+  const response = await openai.responses.create({
+    model: config.openAiModel,
+    instructions: "You evaluate resumes and return structured JSON that matches the supplied schema.",
+    input: buildPrompt(resumeText, jobRole),
+    text: {
+      format: {
+        type: "json_schema",
+        name: "resume_analysis",
+        strict: true,
+        schema: analysisSchema,
+      },
+    },
+  });
+
+  const output = response.output_text;
 
   if (!output) {
-    throw new Error("Local model response did not contain structured output.");
+    throw new Error("OpenAI response did not contain structured output.");
   }
 
   try {
     return JSON.parse(output);
-  } catch {
-    throw new Error("Local model returned invalid JSON. Try again or switch to a smaller local model.");
+  } catch (error) {
+    throw new Error(`OpenAI returned invalid JSON output: ${error.message}`);
   }
 }

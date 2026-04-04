@@ -8,6 +8,11 @@ export async function extractResumeText(buffer) {
 
 export async function analyzeResume(buffer, jobRole = "") {
   const resumeText = await extractResumeText(buffer);
+
+  if (!resumeText) {
+    throw new Error("No readable text was found in the uploaded PDF resume.");
+  }
+
   const analysis = await analyzeResumeText(resumeText, jobRole);
 
   return {

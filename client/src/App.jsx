@@ -1,6 +1,6 @@
 import { useState } from "react";
-
-const API_URL = import.meta.env.VITE_API_URL || "/api/analyze";
+import { extractTextFromPdf } from "./lib/pdfText";
+import { analyzeResumeText } from "./lib/resumeAnalyzer";
 
 function toArray(value) {
   return Array.isArray(value) ? value : [];
@@ -29,22 +29,14 @@ export default function App() {
   const [file, setFile] = useState(null);
   const [jobRole, setJobRole] = useState("");
   const [loading, setLoading] = useState(false);
-  const [downloading, setDownloading] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
-
-  const improvedResume = result?.improvedResume ?? {};
   const skills = toArray(result?.skills);
   const missingSkills = toArray(result?.missingSkills);
   const jobMatchMissingSkills = toArray(result?.jobMatch?.missingSkills);
   const skillAnalysis = toArray(result?.skillAnalysis);
   const topImprovements = toArray(result?.topImprovements);
   const suggestions = toArray(result?.improvementSuggestions);
-  const resumeSkills = toArray(improvedResume.keySkills);
-  const resumeExperience = toArray(improvedResume.experience);
-  const resumeProjects = toArray(improvedResume.projects);
-  const resumeEducation = toArray(improvedResume.education);
-  const resumeCertifications = toArray(improvedResume.certifications);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -57,68 +49,24 @@ export default function App() {
     setLoading(true);
     setError("");
 
-    const formData = new FormData();
-    formData.append("resume", file);
-    formData.append("jobRole", jobRole);
-
     try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        body: formData,
-      });
+      const resumeText = await extractTextFromPdf(file);
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Resume analysis failed.");
+      if (!resumeText) {
+        throw new Error("No readable text was found in the uploaded PDF.");
       }
 
-      setResult(data);
+      const analysis = analyzeResumeText(resumeText, jobRole);
+      setResult({
+        ...analysis,
+        fileName: file.name,
+        jobRole,
+      });
     } catch (submissionError) {
       setResult(null);
       setError(submissionError.message);
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function downloadPdf(path, outputFileName) {
-    if (!result) {
-      return;
-    }
-
-    setDownloading(path);
-    setError("");
-
-    try {
-      const response = await fetch(`${API_URL}${path}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          analysis: result,
-          fileName: result.fileName,
-          jobRole: result.jobRole,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "PDF generation failed.");
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = outputFileName;
-      link.click();
-      window.URL.revokeObjectURL(url);
-    } catch (downloadError) {
-      setError(downloadError.message);
-    } finally {
-      setDownloading("");
     }
   }
 
@@ -134,7 +82,7 @@ export default function App() {
             <h1>Upload your resume and measure how well it fits the role.</h1>
             <p className="hero-text">
               Get a resume score, extracted skills, top improvements, and a job
-              match estimate in a single dashboard.
+              match estimate directly in your browser with no API key or login.
             </p>
           </div>
 
@@ -183,30 +131,6 @@ export default function App() {
                 </div>
                 <ProgressBar value={result.score} />
                 <p className="summary-text">{result.summary}</p>
-                <div className="action-row">
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    disabled={downloading === "/report-pdf"}
-                    onClick={() =>
-                      downloadPdf("/report-pdf", "resume-analysis-report.pdf")
-                    }
-                  >
-                    {downloading === "/report-pdf" ? "Preparing report..." : "Download Report PDF"}
-                  </button>
-                  <button
-                    className="secondary-button secondary-button-blue"
-                    type="button"
-                    disabled={downloading === "/improved-resume-pdf"}
-                    onClick={() =>
-                      downloadPdf("/improved-resume-pdf", "improved-resume.pdf")
-                    }
-                  >
-                    {downloading === "/improved-resume-pdf"
-                      ? "Preparing resume..."
-                      : "Download Improved Resume"}
-                  </button>
-                </div>
               </div>
             </SectionCard>
 
@@ -255,79 +179,6 @@ export default function App() {
                   <li key={item}>{item}</li>
                 ))}
               </ul>
-            </SectionCard>
-
-            <SectionCard title="Improved Resume Draft">
-              <div className="resume-draft">
-                <p className="resume-draft-title">
-                  {improvedResume.candidateName || "Candidate Name"}
-                </p>
-                <p className="resume-draft-headline">
-                  {improvedResume.headline || "Role-focused resume draft"}
-                </p>
-                <p className="resume-draft-meta">
-                  {improvedResume.contactLine || "Contact details will appear here when detected from the resume."}
-                </p>
-                <p className="summary-text">
-                  {improvedResume.professionalSummary || "No professional summary generated yet."}
-                </p>
-                <div className="chip-group">
-                  {resumeSkills.map((skill) => (
-                    <span className="chip" key={skill}>
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-                <div className="resume-preview-grid">
-                  <div className="resume-preview-block">
-                    <p className="resume-preview-label">Experience</p>
-                    <ul className="list compact-list">
-                      {resumeExperience.slice(0, 3).map((item) => (
-                        <li key={`${item.role}-${item.organization}-${item.dates}`}>
-                          <strong>{item.role || "Role"}</strong>
-                          {item.organization ? `, ${item.organization}` : ""}
-                          {item.dates ? ` (${item.dates})` : ""}
-                          {item.bullets?.[0] ? `: ${item.bullets[0]}` : ""}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="resume-preview-block">
-                    <p className="resume-preview-label">Projects</p>
-                    <ul className="list compact-list">
-                      {resumeProjects.slice(0, 2).map((item) => (
-                        <li key={`${item.name}-${item.techStack}`}>
-                          <strong>{item.name || "Project"}</strong>
-                          {item.techStack ? `, ${item.techStack}` : ""}
-                          {item.bullets?.[0] ? `: ${item.bullets[0]}` : ""}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-                <div className="resume-preview-grid">
-                  <div className="resume-preview-block">
-                    <p className="resume-preview-label">Education</p>
-                    <ul className="list compact-list">
-                      {resumeEducation.slice(0, 2).map((item) => (
-                        <li key={`${item.institution}-${item.credential}-${item.dates}`}>
-                          <strong>{item.credential || "Credential"}</strong>
-                          {item.institution ? `, ${item.institution}` : ""}
-                          {item.dates ? ` (${item.dates})` : ""}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className="resume-preview-block">
-                    <p className="resume-preview-label">Certifications</p>
-                    <ul className="list compact-list">
-                      {resumeCertifications.slice(0, 3).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
             </SectionCard>
 
             <SectionCard title="Suggestions">

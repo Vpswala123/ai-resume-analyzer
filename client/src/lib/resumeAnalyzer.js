@@ -189,6 +189,70 @@ function buildSummary(score, skills, missingSkills) {
   return `The resume needs clearer structure, stronger keyword coverage, and better evidence of impact. Missing skills detected: ${missingSkills.slice(0, 3).join(", ") || "multiple areas"}.`;
 }
 
+function inferCandidateName(text) {
+  const firstLine = text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .find(Boolean);
+
+  if (!firstLine) {
+    return "Candidate Name";
+  }
+
+  const cleaned = firstLine.replace(/[^a-zA-Z\s.-]/g, "").trim();
+  return cleaned && cleaned.length <= 40 ? cleaned : "Candidate Name";
+}
+
+function inferContactLine(text) {
+  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
+  const phone = text.match(/(\+?\d[\d\s()-]{7,}\d)/)?.[0]?.trim() || "";
+  const github = text.match(/github\.com\/[^\s|,]+/i)?.[0] || "";
+  const linkedin = text.match(/linkedin\.com\/[^\s|,]+/i)?.[0] || "";
+
+  return [phone, email, linkedin, github].filter(Boolean).join(" | ");
+}
+
+function buildImprovedResume(text, jobRole, skills, suggestions) {
+  const roleTitle = jobRole.trim() || "Professional";
+
+  return {
+    candidateName: inferCandidateName(text),
+    headline: `${roleTitle} Resume`,
+    contactLine: inferContactLine(text),
+    professionalSummary: `Role-aligned candidate with strengths in ${skills.slice(0, 5).join(", ") || "core professional skills"}. Focus the resume on measurable outcomes, clearer keyword coverage, and concise impact-driven bullet points.`,
+    keySkills: skills.slice(0, 10),
+    experience: [
+      {
+        role: "Relevant Experience",
+        organization: "Update with actual employer",
+        location: "",
+        dates: "",
+        bullets: suggestions.slice(0, 3),
+      },
+    ],
+    projects: [
+      {
+        name: "Highlighted Project",
+        techStack: skills.slice(0, 4).join(", "),
+        bullets: [
+          "Add a project that matches the target role and shows practical ownership.",
+          "Use one bullet for the problem, one for the solution, and one for the measurable result.",
+        ],
+      },
+    ],
+    education: [
+      {
+        institution: "Add institution",
+        credential: "Add degree or certification",
+        dates: "",
+        details: "Include graduation year, score, and relevant coursework if useful.",
+      },
+    ],
+    certifications: ["Add relevant certifications here"],
+    topKeywords: skills.slice(0, 12),
+  };
+}
+
 export function analyzeResumeText(resumeText, jobRole) {
   const cleanedText = resumeText.replace(/\s+/g, " ").trim();
   const sections = extractSections(cleanedText);
@@ -214,5 +278,6 @@ export function analyzeResumeText(resumeText, jobRole) {
         ? `Estimated against the target role "${jobRole}" using keyword and resume-structure matching.`
         : "Estimated using general resume strength and visible skill coverage.",
     },
+    improvedResume: buildImprovedResume(cleanedText, jobRole, skills, improvementSuggestions),
   };
 }

@@ -26,11 +26,130 @@ function SectionCard({ title, children, accent = "blue" }) {
   );
 }
 
+function PreviewModal({ kind, result, onClose, onDownload }) {
+  if (!kind || !result) {
+    return null;
+  }
+
+  const improvedResume = result.improvedResume ?? {};
+  const previewTitle = kind === "report" ? "Report Preview" : "Improved Resume Preview";
+
+  return (
+    <div className="preview-overlay" role="dialog" aria-modal="true">
+      <div className="preview-modal">
+        <div className="preview-header">
+          <div>
+            <p className="preview-eyebrow">Preview</p>
+            <h2>{previewTitle}</h2>
+          </div>
+          <button className="preview-close" type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+
+        {kind === "report" ? (
+          <div className="preview-body">
+            <div className="preview-metric-row">
+              <div className="preview-metric">
+                <span>Overall Score</span>
+                <strong>{result.score}/100</strong>
+              </div>
+              <div className="preview-metric">
+                <span>Job Match</span>
+                <strong>{result.jobMatch?.matchPercentage ?? 0}%</strong>
+              </div>
+            </div>
+
+            <div className="preview-section">
+              <h3>Summary</h3>
+              <p>{result.summary}</p>
+            </div>
+
+            <div className="preview-section">
+              <h3>Skills</h3>
+              <p>{(result.skills || []).join(", ") || "Not available."}</p>
+            </div>
+
+            <div className="preview-section">
+              <h3>Missing Skills</h3>
+              <p>{(result.missingSkills || []).join(", ") || "None detected."}</p>
+            </div>
+
+            <div className="preview-section">
+              <h3>Top Improvements</h3>
+              <ul className="list compact-list">
+                {(result.topImprovements || []).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        ) : (
+          <div className="preview-body">
+            <div className="preview-resume-head">
+              <p className="resume-draft-title">{improvedResume.candidateName || "Candidate Name"}</p>
+              <p className="resume-draft-headline">{improvedResume.headline || "Improved Resume"}</p>
+              <p className="resume-draft-meta">{improvedResume.contactLine || "Contact details not detected."}</p>
+            </div>
+
+            <div className="preview-section">
+              <h3>Professional Summary</h3>
+              <p>{improvedResume.professionalSummary || "Not available."}</p>
+            </div>
+
+            <div className="preview-section">
+              <h3>Core Skills</h3>
+              <p>{(improvedResume.keySkills || []).join(" | ") || "Not available."}</p>
+            </div>
+
+            <div className="preview-section">
+              <h3>Experience</h3>
+              <ul className="list compact-list">
+                {(improvedResume.experience || []).map((entry) => (
+                  <li key={`${entry.role}-${entry.organization}-${entry.dates}`}>
+                    <strong>{entry.role || "Role"}</strong>
+                    {entry.organization ? `, ${entry.organization}` : ""}
+                    {entry.dates ? ` (${entry.dates})` : ""}
+                    {entry.bullets?.[0] ? `: ${entry.bullets[0]}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="preview-section">
+              <h3>Projects</h3>
+              <ul className="list compact-list">
+                {(improvedResume.projects || []).map((entry) => (
+                  <li key={`${entry.name}-${entry.techStack}`}>
+                    <strong>{entry.name || "Project"}</strong>
+                    {entry.techStack ? `, ${entry.techStack}` : ""}
+                    {entry.bullets?.[0] ? `: ${entry.bullets[0]}` : ""}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        <div className="preview-actions">
+          <button className="secondary-button" type="button" onClick={onClose}>
+            Back
+          </button>
+          <button className="secondary-button secondary-button-blue" type="button" onClick={onDownload}>
+            Download PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [file, setFile] = useState(null);
   const [jobRole, setJobRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState("");
+  const [previewType, setPreviewType] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
   const skills = toArray(result?.skills);
@@ -65,6 +184,10 @@ export default function App() {
     } finally {
       setDownloading("");
     }
+  }
+
+  function handlePreview(action) {
+    setPreviewType(action);
   }
 
   async function handleSubmit(event) {
@@ -164,18 +287,16 @@ export default function App() {
                   <button
                     className="secondary-button"
                     type="button"
-                    disabled={downloading === "report"}
-                    onClick={() => handleDownload("report")}
+                    onClick={() => handlePreview("report")}
                   >
-                    {downloading === "report" ? "Preparing report..." : "Download Report PDF"}
+                    Preview Report
                   </button>
                   <button
                     className="secondary-button secondary-button-blue"
                     type="button"
-                    disabled={downloading === "resume"}
-                    onClick={() => handleDownload("resume")}
+                    onClick={() => handlePreview("resume")}
                   >
-                    {downloading === "resume" ? "Preparing resume..." : "Download Improved Resume"}
+                    Preview Improved Resume
                   </button>
                 </div>
               </div>
@@ -321,6 +442,16 @@ export default function App() {
           </section>
         ) : null}
       </main>
+
+      <PreviewModal
+        kind={previewType}
+        result={result}
+        onClose={() => setPreviewType("")}
+        onDownload={() => {
+          handleDownload(previewType);
+          setPreviewType("");
+        }}
+      />
     </div>
   );
 }

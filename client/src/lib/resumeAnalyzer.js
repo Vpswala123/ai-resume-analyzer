@@ -159,18 +159,24 @@ function extractSections(text) {
 }
 
 function scoreResume(sections, technicalSkills, roleSkillCoverage, text) {
-  let score = 18;
+  let score = 10;
 
-  if (sections.hasSummary) score += 8;
-  if (sections.hasExperience) score += 14;
-  if (sections.hasProjects) score += 8;
-  if (sections.hasEducation) score += 8;
-  if (sections.hasSkills) score += 10;
-  if (sections.hasMetrics) score += 10;
+  if (sections.hasSummary) score += 7;
+  if (sections.hasExperience) score += 12;
+  if (sections.hasProjects) score += 7;
+  if (sections.hasEducation) score += 7;
+  if (sections.hasSkills) score += 8;
+  if (sections.hasMetrics) score += 12;
   if (sections.hasContact) score += 6;
 
-  score += Math.min(technicalSkills.length * 2, 18);
-  score += Math.round(roleSkillCoverage * 18);
+  score += Math.min(technicalSkills.length * 1.5, 15);
+  score += Math.round(roleSkillCoverage * 22);
+
+  if (roleSkillCoverage < 0.35) score -= 14;
+  else if (roleSkillCoverage < 0.5) score -= 8;
+
+  if (technicalSkills.length < 4) score -= 10;
+  else if (technicalSkills.length < 6) score -= 5;
 
   if (text.length < 900) score -= 8;
   if (text.length > 5000) score -= 4;
@@ -234,7 +240,7 @@ function buildSkillAnalysis(skills, sections) {
 
 function buildSummary(score, skills, missingSkills) {
   if (score >= 80) {
-    return `Strong resume foundation with ${skills.length} detectable skills and a mostly competitive profile.`;
+    return `Strong resume foundation with ${skills.length} detectable skills and solid role alignment evidence.`;
   }
 
   if (score >= 60) {

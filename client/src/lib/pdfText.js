@@ -1,9 +1,11 @@
-import * as pdfjsLib from "pdfjs-dist/build/pdf.mjs";
-import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
-
 export async function extractTextFromPdf(file) {
+  const [pdfjsLib, workerModule] = await Promise.all([
+    import("pdfjs-dist/build/pdf.mjs"),
+    import("pdfjs-dist/build/pdf.worker.min.mjs?url"),
+  ]);
+
+  pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default;
+
   const buffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
   const pageTexts = [];

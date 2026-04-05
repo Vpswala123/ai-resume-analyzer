@@ -1,4 +1,4 @@
-const SKILL_LIBRARY = [
+const TECHNICAL_SKILL_LIBRARY = [
   "JavaScript",
   "TypeScript",
   "React",
@@ -26,16 +26,33 @@ const SKILL_LIBRARY = [
   "Cypress",
   "Machine Learning",
   "Data Analysis",
-  "Leadership",
-  "Communication",
-  "Problem Solving",
-  "Agile",
-  "Project Management",
   "Figma",
   "UI/UX",
   "Power BI",
   "Excel",
+  "MATLAB",
+  "Simulink",
+  "SolidWorks",
+  "CATIA",
+  "ANSYS",
+  "AutoCAD",
+  "CAD",
+  "CFD",
+  "FEA",
+  "Aerodynamics",
+  "Propulsion",
+  "Thermodynamics",
+  "Flight Mechanics",
+  "Finite Element Analysis",
+  "Abaqus",
+  "Creo",
+  "NX",
+  "LabVIEW",
 ];
+
+const SOFT_SKILL_LIBRARY = ["Leadership", "Communication", "Problem Solving", "Agile", "Project Management"];
+
+const SKILL_LIBRARY = [...TECHNICAL_SKILL_LIBRARY, ...SOFT_SKILL_LIBRARY];
 
 const ROLE_SKILLS = {
   "frontend developer": ["JavaScript", "React", "HTML", "CSS", "TypeScript", "Git", "Testing"],
@@ -60,6 +77,44 @@ const ROLE_SKILLS = {
     "Git",
   ],
   "ui ux designer": ["Figma", "UI/UX", "Communication", "Project Management"],
+  "aerospace intern": [
+    "Python",
+    "C++",
+    "MATLAB",
+    "CAD",
+    "SolidWorks",
+    "ANSYS",
+    "Aerodynamics",
+    "Thermodynamics",
+  ],
+  "aerospace engineer": [
+    "Python",
+    "MATLAB",
+    "CAD",
+    "SolidWorks",
+    "ANSYS",
+    "CFD",
+    "Aerodynamics",
+    "Propulsion",
+  ],
+  "mechanical engineer": [
+    "CAD",
+    "SolidWorks",
+    "ANSYS",
+    "MATLAB",
+    "Thermodynamics",
+    "FEA",
+    "Python",
+  ],
+};
+
+const SECTION_HEADERS = {
+  summary: ["summary", "profile", "objective", "professional summary"],
+  experience: ["experience", "work experience", "employment", "internship", "professional experience"],
+  projects: ["projects", "academic projects", "project experience"],
+  education: ["education", "academic background"],
+  skills: ["skills", "technical skills", "core competencies"],
+  certifications: ["certifications", "certificates", "licenses"],
 };
 
 function normalizeText(value) {
@@ -75,6 +130,11 @@ function extractSkills(text) {
   return SKILL_LIBRARY.filter((skill) => normalized.includes(skill.toLowerCase()));
 }
 
+function extractTechnicalSkills(text) {
+  const normalized = normalizeText(text);
+  return TECHNICAL_SKILL_LIBRARY.filter((skill) => normalized.includes(skill.toLowerCase()));
+}
+
 function inferRoleSkills(jobRole, extractedSkills) {
   const normalizedRole = normalizeText(jobRole);
   const matchedRole = Object.keys(ROLE_SKILLS).find((role) => normalizedRole.includes(role));
@@ -87,7 +147,7 @@ function inferRoleSkills(jobRole, extractedSkills) {
     return extractedSkills.slice(0, 8);
   }
 
-  return ["Communication", "Problem Solving", "Project Management", "Git"];
+  return extractedSkills.slice(0, 6);
 }
 
 function extractSections(text) {
@@ -103,19 +163,19 @@ function extractSections(text) {
   };
 }
 
-function scoreResume(sections, skills, missingSkills, text) {
-  let score = 35;
+function scoreResume(sections, technicalSkills, roleSkillCoverage, text) {
+  let score = 18;
 
   if (sections.hasSummary) score += 8;
-  if (sections.hasExperience) score += 12;
+  if (sections.hasExperience) score += 14;
   if (sections.hasProjects) score += 8;
   if (sections.hasEducation) score += 8;
   if (sections.hasSkills) score += 10;
   if (sections.hasMetrics) score += 10;
   if (sections.hasContact) score += 6;
 
-  score += Math.min(skills.length * 2, 16);
-  score -= Math.min(missingSkills.length * 4, 20);
+  score += Math.min(technicalSkills.length * 2, 18);
+  score += Math.round(roleSkillCoverage * 18);
 
   if (text.length < 900) score -= 8;
   if (text.length > 5000) score -= 4;
@@ -139,7 +199,7 @@ function buildSuggestions(sections, missingSkills, score) {
   }
 
   if (missingSkills.length) {
-    suggestions.push(`Add evidence for role-relevant skills such as ${missingSkills.slice(0, 4).join(", ")}.`);
+    suggestions.push(`Add evidence for role-relevant technical skills such as ${missingSkills.slice(0, 4).join(", ")}.`);
   }
 
   if (score < 70) {
@@ -189,18 +249,68 @@ function buildSummary(score, skills, missingSkills) {
   return `The resume needs clearer structure, stronger keyword coverage, and better evidence of impact. Missing skills detected: ${missingSkills.slice(0, 3).join(", ") || "multiple areas"}.`;
 }
 
-function inferCandidateName(text) {
-  const firstLine = text
+function findSectionKey(line) {
+  const normalizedLine = normalizeText(line).replace(/[:|]/g, "");
+
+  return Object.entries(SECTION_HEADERS).find(([, headers]) =>
+    headers.some((header) => normalizedLine === header || normalizedLine.includes(header))
+  )?.[0];
+}
+
+function splitResumeIntoSections(rawText) {
+  const lines = rawText
     .split(/\n+/)
     .map((line) => line.trim())
-    .find(Boolean);
+    .filter(Boolean);
 
-  if (!firstLine) {
-    return "Candidate Name";
-  }
+  const sections = {
+    header: [],
+    summary: [],
+    experience: [],
+    projects: [],
+    education: [],
+    skills: [],
+    certifications: [],
+    other: [],
+  };
 
-  const cleaned = firstLine.replace(/[^a-zA-Z\s.-]/g, "").trim();
-  return cleaned && cleaned.length <= 40 ? cleaned : "Candidate Name";
+  let currentSection = "header";
+
+  lines.forEach((line) => {
+    const foundSection = findSectionKey(line);
+
+    if (foundSection) {
+      currentSection = foundSection;
+      return;
+    }
+
+    sections[currentSection].push(line);
+  });
+
+  return sections;
+}
+
+function inferCandidateName(rawText) {
+  const lines = rawText
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 6);
+
+  const candidate = lines.find((line) => {
+    if (line.length > 40) {
+      return false;
+    }
+
+    if (/@|linkedin|github|\+?\d/.test(line)) {
+      return false;
+    }
+
+    const words = line.split(/\s+/);
+    return words.length >= 2 && words.length <= 4 && /^[A-Za-z.\s-]+$/.test(line);
+  });
+
+  return candidate || "Candidate Name";
 }
 
 function inferContactLine(text) {
@@ -212,54 +322,137 @@ function inferContactLine(text) {
   return [phone, email, linkedin, github].filter(Boolean).join(" | ");
 }
 
-function buildImprovedResume(text, jobRole, skills, suggestions) {
+function extractDate(line) {
+  return (
+    line.match(
+      /\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*[\s,.-]+\d{4}\s*(?:-|to|–)\s*(?:present|current|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*[\s,.-]+\d{4})/i
+    )?.[0] ||
+    line.match(/\b\d{4}\s*(?:-|to|–)\s*(?:present|current|\d{4})/i)?.[0] ||
+    ""
+  );
+}
+
+function sanitizeBullet(line) {
+  return line
+    .replace(/^[•\-–]+/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\.$/, "");
+}
+
+function buildEntryBullets(lines, fallbackBullets) {
+  const bullets = lines
+    .map(sanitizeBullet)
+    .filter((line) => line.length > 25)
+    .slice(0, 3);
+
+  return bullets.length ? bullets : fallbackBullets;
+}
+
+function extractExperienceEntries(lines) {
+  if (!lines.length) {
+    return [];
+  }
+
+  const primaryLine = lines[0];
+  const dates = lines.map(extractDate).find(Boolean) || "";
+  const parts = primaryLine.split(/[-|,]/).map((part) => part.trim()).filter(Boolean);
+
+  return [
+    {
+      role: parts[0] || "Experience",
+      organization: parts[1] || "",
+      location: "",
+      dates,
+      bullets: buildEntryBullets(lines.slice(1), [
+        "Rewrite this experience with action verbs, technical context, and measurable outcomes.",
+      ]),
+    },
+  ];
+}
+
+function extractProjectEntries(lines, technicalSkills) {
+  if (!lines.length) {
+    return [];
+  }
+
+  const primaryLine = lines[0];
+
+  return [
+    {
+      name: primaryLine.length <= 80 ? primaryLine : "Project Experience",
+      techStack: technicalSkills.slice(0, 5).join(", "),
+      bullets: buildEntryBullets(lines.slice(1), [
+        "Clarify the project objective, tools used, and measurable outcome.",
+      ]),
+    },
+  ];
+}
+
+function extractEducationEntries(lines) {
+  if (!lines.length) {
+    return [];
+  }
+
+  const primaryLine = lines[0];
+  const dates = lines.map(extractDate).find(Boolean) || "";
+
+  return [
+    {
+      institution: lines[1] || "",
+      credential: primaryLine,
+      dates,
+      details: lines.slice(2, 4).join(" | "),
+    },
+  ];
+}
+
+function extractCertificationEntries(lines) {
+  return lines.map(sanitizeBullet).filter(Boolean).slice(0, 4);
+}
+
+function buildProfessionalSummary(jobRole, technicalSkills, sections) {
+  const roleTitle = jobRole.trim() || "Professional";
+  const topSkills = technicalSkills.slice(0, 5);
+  const sectionSignals = [];
+
+  if (sections.experience.length) sectionSignals.push("hands-on experience");
+  if (sections.projects.length) sectionSignals.push("project work");
+  if (sections.education.length) sectionSignals.push("academic foundation");
+
+  return `${roleTitle} candidate with exposure to ${topSkills.join(", ") || "relevant technical tools"}. Position the resume around ${sectionSignals.join(", ") || "technical strengths"}, using concise action-led bullets and quantified outcomes where supported by the original resume.`;
+}
+
+function buildImprovedResume(rawText, jobRole, technicalSkills, suggestions) {
+  const sections = splitResumeIntoSections(rawText);
   const roleTitle = jobRole.trim() || "Professional";
 
   return {
-    candidateName: inferCandidateName(text),
+    candidateName: inferCandidateName(rawText),
     headline: `${roleTitle} Resume`,
-    contactLine: inferContactLine(text),
-    professionalSummary: `Role-aligned candidate with strengths in ${skills.slice(0, 5).join(", ") || "core professional skills"}. Focus the resume on measurable outcomes, clearer keyword coverage, and concise impact-driven bullet points.`,
-    keySkills: skills.slice(0, 10),
-    experience: [
-      {
-        role: "Relevant Experience",
-        organization: "Update with actual employer",
-        location: "",
-        dates: "",
-        bullets: suggestions.slice(0, 3),
-      },
-    ],
-    projects: [
-      {
-        name: "Highlighted Project",
-        techStack: skills.slice(0, 4).join(", "),
-        bullets: [
-          "Add a project that matches the target role and shows practical ownership.",
-          "Use one bullet for the problem, one for the solution, and one for the measurable result.",
-        ],
-      },
-    ],
-    education: [
-      {
-        institution: "Add institution",
-        credential: "Add degree or certification",
-        dates: "",
-        details: "Include graduation year, score, and relevant coursework if useful.",
-      },
-    ],
-    certifications: ["Add relevant certifications here"],
-    topKeywords: skills.slice(0, 12),
+    contactLine: inferContactLine(rawText),
+    professionalSummary: buildProfessionalSummary(jobRole, technicalSkills, sections),
+    keySkills: technicalSkills.slice(0, 10),
+    experience: extractExperienceEntries(sections.experience),
+    projects: extractProjectEntries(sections.projects, technicalSkills),
+    education: extractEducationEntries(sections.education),
+    certifications: extractCertificationEntries(sections.certifications),
+    topKeywords: technicalSkills.slice(0, 12),
   };
 }
 
 export function analyzeResumeText(resumeText, jobRole) {
-  const cleanedText = resumeText.replace(/\s+/g, " ").trim();
+  const rawText = resumeText.trim();
+  const cleanedText = rawText.replace(/\s+/g, " ").trim();
   const sections = extractSections(cleanedText);
   const skills = extractSkills(cleanedText);
-  const targetSkills = inferRoleSkills(jobRole, skills);
-  const missingSkills = targetSkills.filter((skill) => !skills.includes(skill));
-  const score = scoreResume(sections, skills, missingSkills, cleanedText);
+  const technicalSkills = extractTechnicalSkills(cleanedText);
+  const targetSkills = inferRoleSkills(jobRole, technicalSkills);
+  const missingSkills = targetSkills.filter((skill) => !technicalSkills.includes(skill));
+  const roleSkillCoverage = targetSkills.length
+    ? (targetSkills.length - missingSkills.length) / targetSkills.length
+    : 0;
+  const score = scoreResume(sections, technicalSkills, roleSkillCoverage, cleanedText);
   const improvementSuggestions = buildSuggestions(sections, missingSkills, score);
 
   return {
@@ -272,12 +465,12 @@ export function analyzeResumeText(resumeText, jobRole) {
     summary: buildSummary(score, skills, missingSkills),
     jobMatch: {
       role: jobRole.trim() || "General",
-      matchPercentage: Math.max(0, Math.min(100, score - missingSkills.length * 3)),
+      matchPercentage: Math.max(0, Math.min(100, Math.round(roleSkillCoverage * 70 + (sections.hasExperience ? 10 : 0) + (sections.hasProjects ? 8 : 0) + (sections.hasMetrics ? 7 : 0)))),
       missingSkills,
       rationale: jobRole.trim()
-        ? `Estimated against the target role "${jobRole}" using keyword and resume-structure matching.`
+        ? `Estimated against the target role "${jobRole}" using technical keyword coverage, project evidence, and resume structure matching.`
         : "Estimated using general resume strength and visible skill coverage.",
     },
-    improvedResume: buildImprovedResume(cleanedText, jobRole, skills, improvementSuggestions),
+    improvedResume: buildImprovedResume(rawText, jobRole, technicalSkills, improvementSuggestions),
   };
 }

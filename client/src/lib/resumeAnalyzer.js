@@ -67,45 +67,12 @@ const ROLE_SKILLS = {
     "Docker",
   ],
   "backend developer": ["Node.js", "Express", "SQL", "REST API", "Docker", "Git", "Testing"],
-  "data analyst": ["SQL", "Python", "Excel", "Power BI", "Data Analysis", "Communication"],
-  "machine learning engineer": [
-    "Python",
-    "Machine Learning",
-    "Data Analysis",
-    "Docker",
-    "AWS",
-    "Git",
-  ],
-  "ui ux designer": ["Figma", "UI/UX", "Communication", "Project Management"],
-  "aerospace intern": [
-    "Python",
-    "C++",
-    "MATLAB",
-    "CAD",
-    "SolidWorks",
-    "ANSYS",
-    "Aerodynamics",
-    "Thermodynamics",
-  ],
-  "aerospace engineer": [
-    "Python",
-    "MATLAB",
-    "CAD",
-    "SolidWorks",
-    "ANSYS",
-    "CFD",
-    "Aerodynamics",
-    "Propulsion",
-  ],
-  "mechanical engineer": [
-    "CAD",
-    "SolidWorks",
-    "ANSYS",
-    "MATLAB",
-    "Thermodynamics",
-    "FEA",
-    "Python",
-  ],
+  "data analyst": ["SQL", "Python", "Excel", "Power BI", "Data Analysis"],
+  "machine learning engineer": ["Python", "Machine Learning", "Data Analysis", "Docker", "AWS", "Git"],
+  "ui ux designer": ["Figma", "UI/UX"],
+  "aerospace intern": ["Python", "C++", "MATLAB", "CAD", "SolidWorks", "ANSYS", "Aerodynamics", "Thermodynamics"],
+  "aerospace engineer": ["Python", "MATLAB", "CAD", "SolidWorks", "ANSYS", "CFD", "Aerodynamics", "Propulsion"],
+  "mechanical engineer": ["CAD", "SolidWorks", "ANSYS", "MATLAB", "Thermodynamics", "FEA", "Python"],
 };
 
 const SECTION_HEADERS = {
@@ -117,12 +84,40 @@ const SECTION_HEADERS = {
   certifications: ["certifications", "certificates", "licenses"],
 };
 
+const EDUCATION_KEYWORDS = [
+  "b.tech",
+  "btech",
+  "bachelor",
+  "master",
+  "m.tech",
+  "mtech",
+  "diploma",
+  "university",
+  "college",
+  "school",
+  "cgpa",
+  "gpa",
+];
+
+const EXPERIENCE_KEYWORDS = ["intern", "engineer", "developer", "analyst", "assistant", "trainee", "research"];
+const PROJECT_KEYWORDS = ["project", "design", "prototype", "simulation", "analysis", "model", "system"];
+const CERTIFICATION_KEYWORDS = ["certificate", "certification", "course", "workshop", "training"];
+
 function normalizeText(value) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function unique(values) {
   return [...new Set(values)];
+}
+
+function cleanLine(line) {
+  return line.replace(/\s+/g, " ").trim();
+}
+
+function lineHasAnyKeyword(line, keywords) {
+  const normalized = normalizeText(line);
+  return keywords.some((keyword) => normalized.includes(keyword));
 }
 
 function extractSkills(text) {
@@ -154,7 +149,7 @@ function extractSections(text) {
   const normalized = normalizeText(text);
   return {
     hasSummary: /summary|profile|objective/.test(normalized),
-    hasExperience: /experience|employment|work history/.test(normalized),
+    hasExperience: /experience|employment|work history|internship/.test(normalized),
     hasProjects: /projects|project/.test(normalized),
     hasEducation: /education|university|college|bachelor|master/.test(normalized),
     hasSkills: /skills|technical skills|core competencies/.test(normalized),
@@ -243,7 +238,7 @@ function buildSummary(score, skills, missingSkills) {
   }
 
   if (score >= 60) {
-    return `Solid starting point, but the resume still has visible gaps in positioning and role alignment.`;
+    return "Solid starting point, but the resume still has visible gaps in positioning and role alignment.";
   }
 
   return `The resume needs clearer structure, stronger keyword coverage, and better evidence of impact. Missing skills detected: ${missingSkills.slice(0, 3).join(", ") || "multiple areas"}.`;
@@ -298,13 +293,8 @@ function inferCandidateName(rawText) {
     .slice(0, 6);
 
   const candidate = lines.find((line) => {
-    if (line.length > 40) {
-      return false;
-    }
-
-    if (/@|linkedin|github|\+?\d/.test(line)) {
-      return false;
-    }
+    if (line.length > 40) return false;
+    if (/@|linkedin|github|\+?\d/.test(line)) return false;
 
     const words = line.split(/\s+/);
     return words.length >= 2 && words.length <= 4 && /^[A-Za-z.\s-]+$/.test(line);
@@ -334,7 +324,7 @@ function extractDate(line) {
 
 function sanitizeBullet(line) {
   return line
-    .replace(/^[•\-–]+/, "")
+    .replace(/^[\u2022\-–]+/, "")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/\.$/, "");
@@ -349,66 +339,150 @@ function buildEntryBullets(lines, fallbackBullets) {
   return bullets.length ? bullets : fallbackBullets;
 }
 
+function isLikelyBullet(line) {
+  return /^[\u2022\-–]/.test(line) || line.length > 35;
+}
+
+function isLikelyExperienceHeading(line) {
+  const normalized = normalizeText(line);
+  return extractDate(line) || (lineHasAnyKeyword(normalized, EXPERIENCE_KEYWORDS) && normalized.length < 110);
+}
+
+function isLikelyProjectHeading(line) {
+  const normalized = normalizeText(line);
+  return lineHasAnyKeyword(normalized, PROJECT_KEYWORDS) && normalized.length < 120;
+}
+
+function isLikelyEducationHeading(line) {
+  return lineHasAnyKeyword(line, EDUCATION_KEYWORDS);
+}
+
+function chunkByHeading(lines, headingMatcher) {
+  const chunks = [];
+  let current = [];
+
+  lines.forEach((line) => {
+    if (headingMatcher(line) && current.length) {
+      chunks.push(current);
+      current = [line];
+      return;
+    }
+
+    current.push(line);
+  });
+
+  if (current.length) {
+    chunks.push(current);
+  }
+
+  return chunks.filter((chunk) => chunk.length);
+}
+
+function splitHeadingParts(line) {
+  return line
+    .split(/\||,| - | – /)
+    .map(cleanLine)
+    .filter(Boolean);
+}
+
 function extractExperienceEntries(lines) {
-  if (!lines.length) {
+  const cleanedLines = lines.map(cleanLine).filter(Boolean);
+
+  if (!cleanedLines.length) {
     return [];
   }
 
-  const primaryLine = lines[0];
-  const dates = lines.map(extractDate).find(Boolean) || "";
-  const parts = primaryLine.split(/[-|,]/).map((part) => part.trim()).filter(Boolean);
+  return chunkByHeading(cleanedLines, isLikelyExperienceHeading)
+    .slice(0, 4)
+    .map((chunk) => {
+      const [heading, ...rest] = chunk;
+      const dates = chunk.map(extractDate).find(Boolean) || "";
+      const parts = splitHeadingParts(heading.replace(dates, "").trim());
 
-  return [
-    {
-      role: parts[0] || "Experience",
-      organization: parts[1] || "",
-      location: "",
-      dates,
-      bullets: buildEntryBullets(lines.slice(1), [
-        "Rewrite this experience with action verbs, technical context, and measurable outcomes.",
-      ]),
-    },
-  ];
+      return {
+        role: parts[0] || "Experience",
+        organization: parts[1] || "",
+        location: parts[2] || "",
+        dates,
+        bullets: buildEntryBullets(rest.filter(isLikelyBullet), [
+          "Rewrite this experience with action verbs, technical context, and measurable outcomes.",
+        ]),
+      };
+    });
 }
 
 function extractProjectEntries(lines, technicalSkills) {
-  if (!lines.length) {
+  const cleanedLines = lines.map(cleanLine).filter(Boolean);
+
+  if (!cleanedLines.length) {
     return [];
   }
 
-  const primaryLine = lines[0];
+  return chunkByHeading(cleanedLines, isLikelyProjectHeading)
+    .slice(0, 4)
+    .map((chunk) => {
+      const [heading, ...rest] = chunk;
 
-  return [
-    {
-      name: primaryLine.length <= 80 ? primaryLine : "Project Experience",
-      techStack: technicalSkills.slice(0, 5).join(", "),
-      bullets: buildEntryBullets(lines.slice(1), [
-        "Clarify the project objective, tools used, and measurable outcome.",
-      ]),
-    },
-  ];
+      return {
+        name: heading.length <= 90 ? heading : "Project Experience",
+        techStack: technicalSkills.slice(0, 6).join(", "),
+        bullets: buildEntryBullets(rest.filter(isLikelyBullet), [
+          "Clarify the project objective, tools used, and measurable outcome.",
+        ]),
+      };
+    });
 }
 
 function extractEducationEntries(lines) {
-  if (!lines.length) {
+  const cleanedLines = lines.map(cleanLine).filter(Boolean);
+
+  if (!cleanedLines.length) {
     return [];
   }
 
-  const primaryLine = lines[0];
-  const dates = lines.map(extractDate).find(Boolean) || "";
+  return chunkByHeading(cleanedLines, isLikelyEducationHeading)
+    .slice(0, 3)
+    .map((chunk) => {
+      const [heading, ...rest] = chunk;
+      const dates = chunk.map(extractDate).find(Boolean) || "";
+      const institution = rest.find((line) => /university|college|school|institute/i.test(line)) || rest[0] || "";
+      const details = rest
+        .filter((line) => line !== institution)
+        .slice(0, 2)
+        .join(" | ");
 
-  return [
-    {
-      institution: lines[1] || "",
-      credential: primaryLine,
-      dates,
-      details: lines.slice(2, 4).join(" | "),
-    },
-  ];
+      return {
+        institution,
+        credential: heading,
+        dates,
+        details,
+      };
+    });
 }
 
 function extractCertificationEntries(lines) {
-  return lines.map(sanitizeBullet).filter(Boolean).slice(0, 4);
+  return lines
+    .map(cleanLine)
+    .filter((line) => lineHasAnyKeyword(line, CERTIFICATION_KEYWORDS) || line.length > 8)
+    .map(sanitizeBullet)
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+function extractExplicitSkillsFromSection(lines) {
+  return unique(
+    lines
+      .flatMap((line) => line.split(/[,|/]/))
+      .map(cleanLine)
+      .filter(Boolean)
+      .flatMap((fragment) =>
+        SKILL_LIBRARY.filter((skill) => normalizeText(fragment).includes(skill.toLowerCase()))
+      )
+  );
+}
+
+function pickKeywordSet(technicalSkills, sectionSkills, targetSkills) {
+  return unique([...sectionSkills, ...technicalSkills, ...targetSkills]).slice(0, 12);
 }
 
 function buildProfessionalSummary(jobRole, technicalSkills, sections) {
@@ -423,21 +497,40 @@ function buildProfessionalSummary(jobRole, technicalSkills, sections) {
   return `${roleTitle} candidate with exposure to ${topSkills.join(", ") || "relevant technical tools"}. Position the resume around ${sectionSignals.join(", ") || "technical strengths"}, using concise action-led bullets and quantified outcomes where supported by the original resume.`;
 }
 
-function buildImprovedResume(rawText, jobRole, technicalSkills, suggestions) {
+function mergeSectionCandidates(sections, sectionNames) {
+  return sectionNames.flatMap((sectionName) => sections[sectionName] || []);
+}
+
+function buildImprovedResume(rawText, jobRole, technicalSkills, targetSkills) {
   const sections = splitResumeIntoSections(rawText);
   const roleTitle = jobRole.trim() || "Professional";
+  const sectionSkills = extractExplicitSkillsFromSection(sections.skills);
+  const experienceLines = mergeSectionCandidates(sections, ["experience", "other"]).filter(
+    (line) => !lineHasAnyKeyword(line, PROJECT_KEYWORDS) && !lineHasAnyKeyword(line, EDUCATION_KEYWORDS)
+  );
+  const projectLines = mergeSectionCandidates(sections, ["projects", "other"]).filter((line) =>
+    lineHasAnyKeyword(line, PROJECT_KEYWORDS)
+  );
+  const educationLines = mergeSectionCandidates(sections, ["education", "other"]).filter((line) =>
+    lineHasAnyKeyword(line, EDUCATION_KEYWORDS)
+  );
+  const certificationLines = mergeSectionCandidates(sections, ["certifications", "other"]).filter((line) =>
+    lineHasAnyKeyword(line, CERTIFICATION_KEYWORDS)
+  );
 
   return {
     candidateName: inferCandidateName(rawText),
     headline: `${roleTitle} Resume`,
     contactLine: inferContactLine(rawText),
     professionalSummary: buildProfessionalSummary(jobRole, technicalSkills, sections),
-    keySkills: technicalSkills.slice(0, 10),
-    experience: extractExperienceEntries(sections.experience),
-    projects: extractProjectEntries(sections.projects, technicalSkills),
-    education: extractEducationEntries(sections.education),
-    certifications: extractCertificationEntries(sections.certifications),
-    topKeywords: technicalSkills.slice(0, 12),
+    keySkills: unique([...sectionSkills, ...technicalSkills]).slice(0, 12),
+    experience: extractExperienceEntries(experienceLines),
+    projects: extractProjectEntries(projectLines.length ? projectLines : sections.projects, technicalSkills),
+    education: extractEducationEntries(educationLines.length ? educationLines : sections.education),
+    certifications: extractCertificationEntries(
+      certificationLines.length ? certificationLines : sections.certifications
+    ),
+    topKeywords: pickKeywordSet(technicalSkills, sectionSkills, targetSkills),
   };
 }
 
@@ -465,12 +558,23 @@ export function analyzeResumeText(resumeText, jobRole) {
     summary: buildSummary(score, skills, missingSkills),
     jobMatch: {
       role: jobRole.trim() || "General",
-      matchPercentage: Math.max(0, Math.min(100, Math.round(roleSkillCoverage * 70 + (sections.hasExperience ? 10 : 0) + (sections.hasProjects ? 8 : 0) + (sections.hasMetrics ? 7 : 0)))),
+      matchPercentage: Math.max(
+        0,
+        Math.min(
+          100,
+          Math.round(
+            roleSkillCoverage * 70 +
+              (sections.hasExperience ? 10 : 0) +
+              (sections.hasProjects ? 8 : 0) +
+              (sections.hasMetrics ? 7 : 0)
+          )
+        )
+      ),
       missingSkills,
       rationale: jobRole.trim()
         ? `Estimated against the target role "${jobRole}" using technical keyword coverage, project evidence, and resume structure matching.`
         : "Estimated using general resume strength and visible skill coverage.",
     },
-    improvedResume: buildImprovedResume(rawText, jobRole, technicalSkills, improvementSuggestions),
+    improvedResume: buildImprovedResume(rawText, jobRole, technicalSkills, targetSkills),
   };
 }
